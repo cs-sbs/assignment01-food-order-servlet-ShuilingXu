@@ -1,23 +1,12 @@
 package cs.sbs.web.servlet;
 
-import cs.sbs.web.model.MenuItem;
+import cs.sbs.web.model.Order;
 import jakarta.servlet.*;
 import jakarta.servlet.http.*;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.stream.Collectors;
 
-public class MenuListServlet extends HttpServlet {
-
-    // 静态菜单数据（模拟数据库）
-    private static final List<MenuItem> MENU = new ArrayList<>();
-    static {
-        MENU.add(new MenuItem("Fried Rice", 8));
-        MENU.add(new MenuItem("Fried Noodles", 9));
-        MENU.add(new MenuItem("Burger", 10));
-    }
+public class OrderDetailServlet extends HttpServlet {
 
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp)
@@ -25,26 +14,35 @@ public class MenuListServlet extends HttpServlet {
         resp.setContentType("text/plain;charset=UTF-8");
         PrintWriter out = resp.getWriter();
 
-        String searchName = req.getParameter("name");
-        List<MenuItem> result;
-
-        if (searchName != null && !searchName.trim().isEmpty()) {
-            String keyword = searchName.trim().toLowerCase();
-            result = MENU.stream()
-                    .filter(item -> item.getName().toLowerCase().contains(keyword))
-                    .collect(Collectors.toList());
-        } else {
-            result = new ArrayList<>(MENU);
+        String pathInfo = req.getPathInfo();
+        if (pathInfo == null || pathInfo.equals("/")) {
+            resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+            out.println("Error: Order ID is required");
+            return;
         }
 
-        out.println("Menu List:");
-        if (result.isEmpty()) {
-            out.println("No menu items found.");
-        } else {
-            for (int i = 0; i < result.size(); i++) {
-                MenuItem item = result.get(i);
-                out.println((i + 1) + ". " + item.getName() + " - $" + item.getPrice());
-            }
+        // 提取订单 ID，例如 /1003 -> 1003
+        String idStr = pathInfo.substring(1);
+        int orderId;
+        try {
+            orderId = Integer.parseInt(idStr);
+        } catch (NumberFormatException e) {
+            resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+            out.println("Error: Invalid order ID format");
+            return;
         }
+
+        Order order = Order.findById(orderId);
+        if (order == null) {
+            resp.setStatus(HttpServletResponse.SC_NOT_FOUND);
+            out.println("Error: Order not found with ID: " + orderId);
+            return;
+        }
+
+        out.println("Order Detail");
+        out.println("Order ID: " + order.getId());
+        out.println("Customer: " + order.getCustomer());
+        out.println("Food: " + order.getFood());
+        out.println("Quantity: " + order.getQuantity());
     }
 }
