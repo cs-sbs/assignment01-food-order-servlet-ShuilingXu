@@ -10,12 +10,31 @@ import java.util.List;
 
 public class OrderCreateServlet extends HttpServlet {
 
-    // 静态菜单数据（与 MenuListServlet 保持一致，用于校验食物是否存在）
+    // 静态菜单数据（与 MenuListServlet 保持一致）
     private static final List<MenuItem> MENU = List.of(
             new MenuItem("Fried Rice", 8),
             new MenuItem("Fried Noodles", 9),
             new MenuItem("Burger", 10)
     );
+
+    // 辅助方法：根据输入查找菜单项（先精确匹配，再包含匹配）
+    private MenuItem findMenuItem(String input) {
+        if (input == null) return null;
+        String trimmed = input.trim();
+        // 1. 精确匹配（忽略大小写）
+        for (MenuItem item : MENU) {
+            if (item.getName().equalsIgnoreCase(trimmed)) {
+                return item;
+            }
+        }
+        // 2. 包含匹配（忽略大小写）
+        for (MenuItem item : MENU) {
+            if (item.getName().toLowerCase().contains(trimmed.toLowerCase())) {
+                return item;
+            }
+        }
+        return null;
+    }
 
     // 处理 POST：创建订单
     protected void doPost(HttpServletRequest req, HttpServletResponse resp)
@@ -56,20 +75,16 @@ public class OrderCreateServlet extends HttpServlet {
             return;
         }
 
-        // 校验食物是否存在于菜单
-        boolean foodExists = MENU.stream().anyMatch(item -> item.getName().equalsIgnoreCase(food.trim()));
-        if (!foodExists) {
+        // 查找菜单项（支持包含匹配）
+        MenuItem menuItem = findMenuItem(food);
+        if (menuItem == null) {
             resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
             out.println("Error: Food '" + food + "' is not on the menu. Available: Fried Rice, Fried Noodles, Burger");
             return;
         }
 
-        // 创建订单（存储标准化食物名称：使用菜单中的原始名称）
-        String standardFoodName = MENU.stream()
-                .filter(item -> item.getName().equalsIgnoreCase(food.trim()))
-                .findFirst()
-                .get().getName();
-        Order newOrder = Order.createOrder(customer.trim(), standardFoodName, quantity);
+        // 创建订单（使用菜单中的标准名称）
+        Order newOrder = Order.createOrder(customer.trim(), menuItem.getName(), quantity);
 
         out.println("Order Created: " + newOrder.getId());
         out.println("Customer: " + newOrder.getCustomer());
@@ -77,7 +92,7 @@ public class OrderCreateServlet extends HttpServlet {
         out.println("Quantity: " + newOrder.getQuantity());
     }
 
-    // 处理 GET：返回所有订单的 HTML 列表（用于在 order.html 中异步加载，实现超链接访问详情）
+    // 处理 GET：返回所有订单的 HTML 列表（用于 order.html 异步加载）
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp)
             throws ServletException, IOException {

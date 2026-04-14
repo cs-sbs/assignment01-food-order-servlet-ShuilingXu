@@ -13,7 +13,7 @@ public class Order {
 
     // 静态订单存储（模拟数据库）
     private static final List<Order> orderDB = new ArrayList<>();
-    private static final AtomicInteger idGenerator = new AtomicInteger(1000);
+    private static final AtomicInteger idGenerator = new AtomicInteger(1002); // 改为1002，使第一个订单ID=1003
 
     public Order(int id, String customer, String food, int quantity) {
         this.id = id;
@@ -24,7 +24,7 @@ public class Order {
 
     // 创建新订单并存入静态列表
     public static synchronized Order createOrder(String customer, String food, int quantity) {
-        int newId = idGenerator.incrementAndGet();
+        int newId = idGenerator.incrementAndGet(); // 第一次调用得到1003
         Order order = new Order(newId, customer, food, quantity);
         orderDB.add(order);
         return order;
